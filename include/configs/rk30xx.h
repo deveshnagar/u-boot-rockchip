@@ -33,6 +33,15 @@ Revision:       1.00
 #define CONFIG_INITRD_TAG		/* Required for ramdisk support */
 #define CONFIG_BOARD_LATE_INIT
 
+/*Devesh added to abort autoboot */
+#define CONFIG_SYS_HUSH_PARSER
+#define CONFIG_MENUKEY 1
+#define CONFIG_CTRLC 1
+#define CONFIG_BOOTDELAY 5
+#undef CONFIG_ZERO_BOOTDELAY_CHECK     /* ignore keypress on bootdelay==0 */
+/* #define CONFIG_AUTOBOOT_KEYED */          /* use key strings to stop autoboot */
+
+
 #define CONFIG_USE_RK30IRQ
 /*
  * Enabling relocation of u-boot by default

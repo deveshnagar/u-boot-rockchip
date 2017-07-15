@@ -210,12 +210,13 @@ static int abortboot_normal(int bootdelay)
 		}
 	}
 #endif
-
+	printf("devesh:bootdelay=%d\n", bootdelay);
 	while ((bootdelay > 0) && (!abort)) {
 		--bootdelay;
 		/* delay 1000 ms */
 		ts = get_timer(0);
 		do {
+			printf("devesh:inloop\n");
 			if (tstc()) {	/* we got a key press	*/
 				abort  = 1;	/* don't auto boot	*/
 				bootdelay = 0;	/* no more delay	*/
@@ -246,6 +247,7 @@ static int abortboot_normal(int bootdelay)
 static int abortboot(int bootdelay)
 {
 #ifdef CONFIG_AUTOBOOT_KEYED
+	printf("devesh:config_autoboot_keyed 250\n");
 	return abortboot_keyed(bootdelay);
 #else
 	return abortboot_normal(bootdelay);
@@ -321,6 +323,7 @@ static void process_fdt_options(const void *blob)
 #ifdef CONFIG_BOOTDELAY
 static void process_boot_delay(void)
 {
+	printf("devesh:process_boot_delay +\n");
 #ifdef CONFIG_OF_CONTROL
 	char *env;
 #endif
@@ -416,10 +419,74 @@ static void process_boot_delay(void)
 #ifdef CONFIG_ROCKCHIP
 void main_loop (void)
 {
+	static char lastcommand[CONFIG_SYS_CBSIZE] = { 0, };
+	printf("devesh:rockchips main_loop+\n");
     char *p;
     if ((p = getenv ("preboot")) != NULL) {
+		printf("getenv(preboot)!=null\n");
         run_command_list(p, -1, 0);
     }
+	int len;
+	int rc = 1;
+	int flag;
+
+#ifdef CONFIG_BOOTDELAY
+	printf("devesh:calling process_boot-delay()\n");
+	process_boot_delay();
+#endif
+
+#ifdef CONFIG_SYS_HUSH_PARSER
+	parse_file_outer();
+	/* This point is never reached */
+	for (;;);
+#else
+	for (;;) {
+#ifdef CONFIG_BOOT_RETRY_TIME
+		if (rc >= 0) {
+			/* Saw enough of a valid command to
+			 * restart the timeout.
+			 */
+			reset_cmd_timeout();
+		}
+#endif
+		len = readline (CONFIG_SYS_PROMPT);
+
+		flag = 0;	/* assume no special flags for now */
+		if (len > 0)
+			strcpy (lastcommand, console_buffer);
+		else if (len == 0)
+			flag |= CMD_FLAG_REPEAT;
+#ifdef CONFIG_BOOT_RETRY_TIME
+		else if (len == -2) {
+			/* -2 means timed out, retry autoboot
+			 */
+			puts ("\nTimed out waiting for command\n");
+# ifdef CONFIG_RESET_TO_RETRY
+			/* Reinit board to run initialization code again */
+			do_reset (NULL, 0, 0, NULL);
+# else
+			return;		/* retry autoboot */
+# endif
+		}
+#endif
+
+		if (len == -1)
+			puts ("<INTERRUPT>\n");
+		else
+			rc = run_command(lastcommand, flag);
+
+		if (rc <= 0) {
+			/* invalid command or not repeatable, forget it */
+			lastcommand[0] = 0;
+		}
+	}
+#endif /*CONFIG_SYS_HUSH_PARSER*/
+
+
+
+
+
+
     run_command_list(CONFIG_BOOTCOMMAND, -1, 0);
 
     /* Should not reach here. */
@@ -430,6 +497,7 @@ void main_loop (void)
 #else //CONFIG_ROCKCHIP
 void main_loop(void)
 {
+	printf("devesh:main_loop 436+\n");
 #ifndef CONFIG_SYS_HUSH_PARSER
 	static char lastcommand[CONFIG_SYS_CBSIZE] = { 0, };
 	int len;
@@ -487,6 +555,7 @@ void main_loop(void)
 #endif /* CONFIG_UPDATE_TFTP */
 
 #ifdef CONFIG_BOOTDELAY
+	printf("devesh:calling process_boot-delay()\n");
 	process_boot_delay();
 #endif
 	/*
@@ -1507,6 +1576,7 @@ static int builtin_run_command_list(char *cmd, int flag)
 
 int run_command_list(const char *cmd, int len, int flag)
 {
+	printf("devesh:runcomand_list+\n");
 	int need_buff = 1;
 	char *buff = (char *)cmd;	/* cast away const */
 	int rcode = 0;
